@@ -1,0 +1,382 @@
+SECURE COMPANY NETWORK — LIVE DEMONSTRATION GUIDE Cisco Packet Tracer
+9.x | Beginner-friendly viva guide
+
+============================================================ 1. BEFORE
+YOUR SIR ARRIVES
+============================================================
+
+1.  Open Cisco Packet Tracer.
+2.  Open your saved project: Secure_Company_Network.pkt
+3.  Wait until the links settle. Green links normally indicate the
+    physical connections are up.
+4.  Make sure the server is powered on and its DNS, HTTP, HTTPS and FTP
+    services are still enabled.
+5.  Do not change configurations during the demonstration unless
+    something is genuinely wrong.
+6.  Keep a backup copy of the .pkt file.
+
+Your network addressing:
+
+Department / Device VLAN Network Gateway HR 10 192.168.10.0/24
+192.168.10.1 Finance 20 192.168.20.0/24 192.168.20.1 IT 30
+192.168.30.0/24 192.168.30.1 Admin 40 192.168.40.0/24 192.168.40.1
+Company Server 50 192.168.50.0/24 192.168.50.1 Management 99
+192.168.99.0/24 192.168.99.1
+
+Important device IPs: HR-PC1 192.168.10.11 Finance-PC1 192.168.20.11
+IT-PC1 192.168.30.11 Admin-PC1 192.168.40.11 Server 192.168.50.10
+Management PC 192.168.99.10 SW-CORE SVI 192.168.99.2
+
+============================================================ 2. OPENING
+EXPLANATION (SAY THIS)
+============================================================
+
+“This project is a secure interconnected company network. I have
+separated the departments using VLANs, connected the VLANs through
+router-on-a-stick, and applied security controls. The HR and Finance
+departments are isolated from each other using an extended ACL, while
+both can still access the company server. I have also configured SSH for
+secure switch management and port security on selected switch ports.”
+
+Point to these devices in the topology: - R1: routes traffic between
+VLANs. - SW-CORE: connects the department switches, server and router. -
+HR, Finance, IT and Admin switches: connect department PCs. - Company
+Server: provides configured network services. - Management PC: belongs
+to the separate management VLAN.
+
+============================================================ 3.
+DEMONSTRATE VLANs ON SW-CORE
+============================================================
+
+Click SW-CORE, open CLI, and enter:
+
+enable show vlan brief
+
+Expected: the VLAN list should include: 10 HR 20 FINANCE 30 IT 40 ADMIN
+50 SERVER 99 MANAGEMENT
+
+The exact display layout and port list may differ. Confirm the VLAN IDs
+and names are present.
+
+Say: “Each department and the server have a separate VLAN. This
+separates their Layer 2 broadcast domains.”
+
+Next, enter:
+
+show interfaces trunk
+
+Expected: - Fa0/1, Fa0/2, Fa0/3 and Fa0/4 should be trunking to
+department switches. - Fa0/24 should be trunking to R1. - Allowed VLANs
+should include 10,20,30,40,50,99. - The VLANs should appear in the
+active and forwarding lists.
+
+Say: “The trunk links carry multiple VLANs between the core switch,
+department switches and router.”
+
+============================================================ 4.
+DEMONSTRATE ROUTER-ON-A-STICK ON R1
+============================================================
+
+Click R1, open CLI, and enter:
+
+enable show ip interface brief
+
+Expected: - GigabitEthernet0/0 should be up/up. - GigabitEthernet0/0.10
+should have 192.168.10.1 and be up/up. - GigabitEthernet0/0.20 should
+have 192.168.20.1 and be up/up. - GigabitEthernet0/0.30 should have
+192.168.30.1 and be up/up. - GigabitEthernet0/0.40 should have
+192.168.40.1 and be up/up. - GigabitEthernet0/0.50 should have
+192.168.50.1 and be up/up. - GigabitEthernet0/0.99 should have
+192.168.99.1 and be up/up.
+
+Say: “R1 uses one physical interface with 802.1Q subinterfaces to route
+traffic between the VLANs. Each VLAN uses its router subinterface as its
+default gateway.”
+
+============================================================ 5.
+DEMONSTRATE THE MAIN SECURITY FEATURE: EXTENDED ACL
+============================================================
+
+On R1, enter:
+
+show access-lists
+
+Expected ACL:
+
+Extended IP access list BLOCK-HR-FINANCE 10 deny ip 192.168.10.0
+0.0.0.255 192.168.20.0 0.0.0.255 20 deny ip 192.168.20.0 0.0.0.255
+192.168.10.0 0.0.0.255 30 permit ip any any
+
+Your previously observed counters were: - HR to Finance deny: 8
+matches - Finance to HR deny: 4 matches - Permit any to any: 12 matches
+
+Counters can increase as you run more tests. The exact numbers may
+therefore be different during the viva.
+
+Check where the ACL is applied:
+
+show ip interface
+
+Expected: - GigabitEthernet0/0.10: Inbound access list is
+BLOCK-HR-FINANCE - GigabitEthernet0/0.20: Inbound access list is
+BLOCK-HR-FINANCE
+
+Say: “The ACL blocks IP traffic from HR to Finance and from Finance to
+HR. The final permit rule allows other IP traffic, including access to
+the company server.”
+
+============================================================ 6. LIVE
+PING DEMONSTRATION
+============================================================
+
+A. HR-PC1 successful server access
+
+Open HR-PC1 > Desktop > Command Prompt.
+
+Command: ping 192.168.50.10
+
+Expected: Reply from 192.168.50.10 Packets: Sent = 4, Received = 4, Lost
+= 0
+
+Your observed test: 4 sent, 4 received, 0 lost.
+
+Say: “HR can access the company server because the ACL permits this
+traffic.”
+
+B. HR-PC1 blocked access to Finance
+
+On HR-PC1:
+
+ping 192.168.20.11
+
+Expected: The ping should fail. Your observed output was: Reply from
+192.168.10.1: Destination host unreachable. Packets: Sent = 4, Received
+= 0, Lost = 4
+
+Say: “This is intentional. The router ACL prevents HR from communicating
+with Finance.”
+
+C. Finance-PC1 blocked access to HR
+
+Open Finance-PC1 > Desktop > Command Prompt.
+
+Command: ping 192.168.10.11
+
+Expected: The ping should fail. Your observed output was: Reply from
+192.168.20.1: Destination host unreachable. Packets: Sent = 4, Received
+= 0, Lost = 4
+
+D. Finance-PC1 successful server access
+
+On Finance-PC1:
+
+ping 192.168.50.10
+
+Expected: Reply from 192.168.50.10 Packets: Sent = 4, Received = 4, Lost
+= 0
+
+Your observed test: 4 sent, 4 received, 0 lost.
+
+Say: “Finance can also access the company server, even though direct
+communication with HR is blocked.”
+
+E. Optional tests for IT and Admin
+
+Use IT-PC1 (192.168.30.11):
+
+ping 192.168.30.1 ping 192.168.10.11 ping 192.168.20.11 ping
+192.168.40.11 ping 192.168.50.10
+
+Use Admin-PC1 (192.168.40.11):
+
+ping 192.168.40.1 ping 192.168.10.11 ping 192.168.20.11 ping
+192.168.30.11 ping 192.168.50.10
+
+With the current ACL, IT and Admin are not blocked by the HR-Finance
+rules. These tests are expected to succeed if the destination devices
+are connected and configured correctly. Do not claim that IT has special
+privileged access or that Admin is restricted: those additional policies
+have NOT been configured.
+
+============================================================ 7.
+DEMONSTRATE MANAGEMENT VLAN
+============================================================
+
+On SW-CORE:
+
+show ip interface brief
+
+Expected: Vlan99 192.168.99.2 up up
+
+Then:
+
+ping 192.168.99.1 ping 192.168.99.10
+
+Expected: Replies from the router gateway and Management PC.
+
+Your previous tests returned 4/5 replies for each ping. A first packet
+may be lost while ARP resolves the destination. If needed, repeat the
+ping; subsequent replies should succeed.
+
+Say: “The management PC and core switch use a separate management VLAN.
+This keeps network administration separate from user departments.”
+
+============================================================ 8.
+DEMONSTRATE SSH AND PORT SECURITY
+============================================================
+
+On SW-CORE:
+
+show ip ssh
+
+Expected: SSH should be enabled, preferably SSH version 2.
+
+Then:
+
+show port-security
+
+Expected: The ports configured for port security should show: - Port
+Security: Enabled - Maximum MAC addresses: 1 - Violation mode:
+Restrict - Sticky MAC learning configured
+
+For more detail, use:
+
+show port-security interface fa0/11 show port-security interface fa0/10
+show port-security interface fa0/14
+
+Note: Fa0/10 and Fa0/14 were configured for server VLAN access and
+Fa0/11 for the management PC. Confirm the live port assignments in your
+topology before describing them.
+
+Say: “SSH provides encrypted remote management. Port security limits the
+number of MAC addresses learned on selected access ports and uses
+restrict mode when a violation occurs.”
+
+Do not display or announce your configured login password during the
+demonstration. If the example password used during setup is still
+active, change it to a strong unique password before submission.
+
+============================================================ 9. SERVER
+SERVICES DEMONSTRATION (OPTIONAL)
+============================================================
+
+Click the Company Server > Services.
+
+Check that the services you configured are ON: - DNS - HTTP - HTTPS -
+FTP
+
+DNS record previously configured: company.local -> 192.168.50.10
+
+Optional client test: On a PC, open Desktop > Web Browser and try:
+http://company.local
+
+Expected: The company web page should load if HTTP and DNS are enabled
+and the PC has the correct DNS address (192.168.50.10).
+
+You can also try: https://company.local
+
+Expected: The HTTPS page should load if HTTPS is enabled and configured.
+
+Only demonstrate FTP if you have created a valid FTP user account.
+
+============================================================ 10.
+SECURITY FEATURES: WHAT IS AND IS NOT IMPLEMENTED
+============================================================
+
+Implemented and tested: - VLAN segmentation: VLANs 10, 20, 30, 40, 50
+and 99. - Router-on-a-stick inter-VLAN routing. - Extended ACL blocking
+HR <-> Finance. - Permit rule allowing other IP traffic. - SSH version 2
+on SW-CORE. - Port security on selected access ports. - Separate
+management VLAN. - Static IP addressing. - Server access from HR and
+Finance tested successfully.
+
+Not enabled in the final configuration: - DHCP Snooping: disabled
+because all endpoints use static IP addresses. - Dynamic ARP Inspection
+(DAI): disabled because the Packet Tracer switch image did not provide
+the static ARP ACL support needed to authorize the statically addressed
+endpoints safely.
+
+Do not claim that DHCP Snooping or DAI is active.
+
+Also do not claim that IT has special full administrative access or that
+Admin is isolated by an ACL. The only inter-department ACL policy
+currently configured is HR-to-Finance blocking in both directions.
+
+============================================================
+
+============================================================ 14.
+PHYSICAL CONNECTION MAP — DEVICE TO SWITCH PORT
+============================================================
+
+A. CONFIRMED UPLINK CONNECTIONS
+
+These connections were confirmed by the CDP neighbour output:
+
+SW-CORE Fa0/1 <—-> SW-HR Fa0/24 SW-CORE Fa0/2 <—-> SW-FINANCE Fa0/24
+SW-CORE Fa0/3 <—-> SW-IT Fa0/24 SW-CORE Fa0/4 <—-> SW-ADMIN Fa0/24
+SW-CORE Fa0/24 <—-> R1 GigabitEthernet0/0
+
+All five SW-CORE links were confirmed trunking. Their allowed VLANs were
+10,20,30,40,50,99.
+
+B. CONFIRMED / MOST RECENTLY OBSERVED END-DEVICE PORTS ON SW-CORE
+
+SW-CORE Fa0/11: Management PC, VLAN 99. SW-CORE Fa0/14: Company Server,
+VLAN 50 (most recently observed connected/up). SW-CORE Fa0/10: Was also
+configured for VLAN 50 and port security, but a later status output
+showed it down. Do not describe it as currently connected unless you
+confirm the cable in the live Packet Tracer topology.
+
+The Management PC was moved to Fa0/11; its ping to 192.168.99.1 was
+successful. The server was reconnected to Fa0/14 and later showed up/up.
+
+C. DEPARTMENT PC ACCESS PORTS — VERIFY BEFORE THE VIVA
+
+The exact Fa port numbers for each individual HR, Finance, IT and Admin
+PC were not confirmed in the information available when this guide was
+prepared. Do not guess these port numbers.
+
+To identify the exact ports, open each department switch’s CLI and run:
+
+enable show interfaces status show mac address-table show cdp neighbors
+
+Use the results as follows: - show interfaces status lists ports that
+are connected and their VLAN. - show mac address-table shows which port
+learned each device MAC. - show cdp neighbors identifies the
+neighbouring switch and uplink.
+
+Check these switches individually: - SW-HR - SW-FINANCE - SW-IT -
+SW-ADMIN
+
+For the uplinks, you should see the local Fa0/24 connected to SW-CORE on
+the matching core port listed in section A.
+
+D. HOW TO EXPLAIN THE CABLING TO YOUR SIR
+
+“Each department has its own access switch. The HR, Finance, IT and
+Admin switches connect to SW-CORE through their Fa0/24 uplink ports. On
+SW-CORE, those links are Fa0/1 through Fa0/4 respectively. SW-CORE
+Fa0/24 connects to R1 GigabitEthernet0/0. The Management PC is connected
+to SW-CORE Fa0/11 in VLAN 99, and the Company Server is connected to
+SW-CORE Fa0/14 in VLAN 50.”
+
+Only use the final sentence if those two cables are still connected to
+those ports when you open your project.
+
+E. QUICK PORT CHECK BEFORE DEMONSTRATION
+
+On SW-CORE:
+
+show cdp neighbors show interfaces status show vlan brief show
+interfaces trunk
+
+On each department switch:
+
+show cdp neighbors show interfaces status show vlan brief
+
+Write down the actual PC-to-port mapping from the live output. That will
+give you an exact cabling list for your topology diagram.
+
+============================================================ END OF
+PHYSICAL CONNECTION MAP
+============================================================
